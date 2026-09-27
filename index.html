@@ -660,6 +660,7 @@
           <div>
             <h3>Your agents work as usual</h3>
             <p>Every prompt, tool call and edit is appended to a local queue in about 40 milliseconds. No git process, no network, and it always exits zero. When the turn ends, the queue becomes one run in the ledger.</p>
+            <p class="note">Nothing showing up? <code>deepblame doctor</code> says why, and what to do about it.</p>
           </div>
         </li>
         <li>
@@ -757,16 +758,17 @@ Add <span class="w">--apply</span> to undo 1 file.</pre>
     <div class="mark"><b>agents</b> git <span>(Yusuf)</span></div>
     <div class="body">
       <h2>It works with the tools you already use.</h2>
-      <p>The fallbacks are coarser on purpose, and they say so. When a hooked agent and a commit both touch a line, the agent we actually watched keeps the credit.</p>
+      <p>Claude Code, Cursor and OpenCode are recorded tool call by tool call. The fallbacks are coarser on purpose, and they say so. When a hooked agent and a commit both touch a line, the agent we actually watched keeps the credit.</p>
 
       <div class="tablewrap">
         <table>
           <thead><tr><th>Tool</th><th>Set up with</th><th>What you get</th></tr></thead>
           <tbody>
             <tr><td>Claude Code</td><td><code>init</code>, automatically</td><td>Every prompt, tool call and edit, with model and cost</td></tr>
+            <tr><td>Cursor</td><td><code>init</code>, automatically</td><td>Every prompt, read and edit, with the exact strings it replaced</td></tr>
             <tr><td>OpenCode</td><td><code>init</code>, automatically</td><td>The same, with the tokens and price OpenCode itself reports</td></tr>
             <tr><td>Codex</td><td><code>hooks install --agent codex</code></td><td>One run per turn, with the files it changed</td></tr>
-            <tr><td>Cursor, Copilot, anything</td><td><code>hooks install --agent git</code></td><td>One run per commit, with the lines it changed</td></tr>
+            <tr><td>Copilot, Windsurf, anything</td><td><code>hooks install --agent git</code></td><td>One run per commit, with the lines it changed</td></tr>
           </tbody>
         </table>
       </div>
@@ -779,7 +781,7 @@ Add <span class="w">--apply</span> to undo 1 file.</pre>
   <section class="strip" id="commands">
     <div class="mark"><b>commands</b> you</div>
     <div class="body">
-      <h2>Nine commands, and that is the whole surface.</h2>
+      <h2>Eleven commands, and that is the whole surface.</h2>
       <p>Run any of them with <code>--json</code> for machine-readable output, or <code>-C &lt;dir&gt;</code> to work in another directory.</p>
 
       <div class="tablewrap">
@@ -793,6 +795,8 @@ Add <span class="w">--apply</span> to undo 1 file.</pre>
             <tr><td>deepblame blame &lt;file&gt;</td><td>Which agent wrote each line, and how sure we are</td></tr>
             <tr><td>deepblame cost</td><td>What the agents spent, by model and by agent</td></tr>
             <tr><td>deepblame revert</td><td>Undo one agent's work and nobody else's</td></tr>
+            <tr><td>deepblame doctor</td><td>Check recording is working, and say what to fix</td></tr>
+            <tr><td>deepblame gc</td><td>Age old file contents out of the ledger</td></tr>
             <tr><td>deepblame seal</td><td>Fold captured events into the ledger now</td></tr>
             <tr><td>deepblame hooks</td><td>Install, uninstall or check the capture hooks</td></tr>
           </tbody>
