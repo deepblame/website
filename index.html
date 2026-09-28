@@ -255,10 +255,10 @@
   .hero { padding: 84px 0 0; }
   .hero h1 {
     margin: 0;
-    max-width: 17ch;
-    font-size: clamp(38px, 6.4vw, 66px);
-    line-height: 1.04;
-    letter-spacing: -0.028em;
+    max-width: 20ch;
+    font-size: clamp(32px, 4.6vw, 50px);
+    line-height: 1.08;
+    letter-spacing: -0.024em;
     font-weight: 600;
   }
   .hero .lead {
@@ -411,6 +411,18 @@
     -webkit-text-size-adjust: 100%;
   }
   .hero-shot .term pre { font-size: 14px; padding: 22px 20px 24px; }
+  /* Lines are hidden only once the script has taken charge of showing them,
+     so the text is there whether or not any of this runs. */
+  .term[data-play="yes"] .ln { opacity: 0; }
+  .term[data-play="yes"][data-shown="yes"] .ln {
+    animation: line-in 0.26s ease-out forwards;
+  }
+  @keyframes line-in { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .term[data-play="yes"] .ln { opacity: 1; }
+    .term[data-play="yes"][data-shown="yes"] .ln { animation: none; }
+  }
+
   .term .d { color: var(--term-dim); }
   .term .g { color: var(--brand); }
   .term .w { color: #fff; font-weight: 500; }
@@ -444,7 +456,14 @@
     color: var(--term-ink);
     font: 400 15px/1 var(--mono);
   }
-  .cmd > span { overflow-x: auto; white-space: nowrap; }
+  .cmd > span {
+    overflow-x: auto;
+    white-space: nowrap;
+    /* Scrollable on a narrow phone, but never painting a bar across the pill. */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .cmd > span::-webkit-scrollbar { display: none; }
   .cmd .prompt { color: var(--brand); margin-right: 8px; }
   .cmd button {
     flex: none;
@@ -471,8 +490,8 @@
   }
   .closing h2 {
     margin: 0;
-    font-size: clamp(34px, 6vw, 62px);
-    line-height: 1.06;
+    font-size: clamp(30px, 4.2vw, 46px);
+    line-height: 1.08;
     letter-spacing: -0.028em;
     font-weight: 600;
     color: #fff;
@@ -846,33 +865,99 @@ Add <span class="w">--apply</span> to undo 1 file.</pre>
 </div>
 
 <script>
-  for (const button of document.querySelectorAll("[data-cmd]")) {
-    button.addEventListener("click", () => {
-      const done = () => {
-        button.textContent = "Copied";
-        button.dataset.copied = "yes";
-        setTimeout(() => { button.textContent = "Copy"; button.dataset.copied = "no"; }, 1600);
-      };
-      try {
-        navigator.clipboard.writeText(button.dataset.cmd).then(done, () => select(button));
-      } catch {
-        select(button);
+  /* ---- copy ---------------------------------------------------------
+     The clipboard can refuse for reasons that have nothing to do with the
+     person: an insecure context, a browser that never shipped the async API,
+     a permission prompt they dismissed. So there are three ways down, and the
+     button always says which one happened rather than going quiet. */
+
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
       }
+    } catch {
+      // Fall through and try the older route.
+    }
+    try {
+      const field = document.createElement("textarea");
+      field.value = text;
+      field.setAttribute("readonly", "");
+      field.style.cssText = "position:fixed;top:-1000px;left:0;opacity:0";
+      document.body.appendChild(field);
+      field.select();
+      const done = document.execCommand("copy");
+      field.remove();
+      /* The offscreen field held the selection; leaving it behind is what drew
+         a highlight across the command. */
+      window.getSelection()?.removeAllRanges();
+      return done;
+    } catch {
+      return false;
+    }
+  }
+
+  for (const button of document.querySelectorAll("[data-cmd]")) {
+    button.addEventListener("click", async () => {
+      const said = (word, ok) => {
+        button.textContent = word;
+        button.dataset.copied = ok ? "yes" : "no";
+        setTimeout(() => { button.textContent = "Copy"; button.dataset.copied = "no"; }, 1800);
+      };
+      const worked = await copyText(button.dataset.cmd);
+      if (worked) return said("Copied", true);
+      /* Nothing left but to put it in front of them, selected, to copy by hand. */
+      const line = button.previousElementSibling;
+      if (line) {
+        const range = document.createRange();
+        range.selectNodeContents(line);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+      said(navigator.platform.startsWith("Mac") ? "Press ⌘C" : "Press Ctrl+C", false);
     });
   }
 
-  /* Clipboard refused: show the command selected, so it can be copied by hand. */
-  function select(button) {
-    const line = button.previousElementSibling;
-    if (!line) return;
-    const range = document.createRange();
-    range.selectNodeContents(line);
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }
+  /* ---- terminals ------------------------------------------------------
+     Output arrives a line at a time, so that is how these fill in: once a
+     terminal is on screen, and once only. Nothing depends on it — the text is
+     in the page already, and this only takes over after it has loaded. */
+  (() => {
+    const terms = [...document.querySelectorAll(".term")];
+    if (terms.length === 0) return;
 
-  /* The drawer. Closes on a link, on Escape, and when the layout grows past it. */
+    for (const term of terms) {
+      const pre = term.querySelector("pre");
+      if (!pre) continue;
+      /* Every span in this markup sits inside one line, so the line breaks are
+         a safe place to cut. A blank line still needs a box to fade. */
+      const lines = pre.innerHTML.split("\n");
+      if (lines.length < 2) continue;
+      pre.innerHTML = lines
+        .map((line, index) => `<span class="ln" style="animation-delay:${index * 55}ms">${line === "" ? "&#8203;" : line}</span>`)
+        .join("\n");
+      term.dataset.play = "yes";
+    }
+
+    const show = (term) => { term.dataset.shown = "yes"; };
+    if (!("IntersectionObserver" in window)) {
+      for (const term of terms) show(term);
+      return;
+    }
+    const watcher = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        show(entry.target);
+        watcher.unobserve(entry.target);
+      }
+    }, { rootMargin: "0px 0px -12% 0px", threshold: 0.15 });
+    for (const term of terms) watcher.observe(term);
+  })();
+
+  /* ---- drawer ---------------------------------------------------------
+     Closes on a link, on Escape, and when the layout grows past it. */
   (() => {
     const menu = document.getElementById("menu");
     const backdrop = document.getElementById("menu-backdrop");
