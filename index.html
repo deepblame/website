@@ -587,6 +587,7 @@
       <a href="#how">How it works</a>
       <a href="#agents">Agents</a>
       <a href="#team">Teams</a>
+      <a href="#standard">Standard</a>
       <a href="#commands">Commands</a>
     </nav>
     <div class="header-right">
@@ -619,6 +620,7 @@
       <li><a href="#cost">What it cost</a></li>
       <li><a href="#agents">Agents it records</a></li>
       <li><a href="#team">Teams and pull requests</a></li>
+      <li><a href="#standard">Agent Trace</a></li>
       <li><a href="#commands">Commands</a></li>
     </ol>
   </div>
@@ -666,7 +668,7 @@
   </section>
 
   <section class="works" id="agents">
-    <p>Records every coding agent you already use — and anything else, in one JSON object</p>
+    <p>Records every coding agent you already use, and exchanges it in the format the agent vendors agreed on</p>
     <div class="works-row">
       <div><b>Claude Code</b><span>every prompt, read and edit</span></div>
       <div><b>Cursor</b><span>every prompt, read and edit</span></div>
@@ -789,6 +791,32 @@ Add <span class="w">--apply</span> to undo 1 file.</pre>
     </div>
   </div>
 
+  <section class="section-head" id="standard">
+    <h2>It speaks the standard, so your record is not stuck here.</h2>
+    <p><a href="https://agent-trace.dev">Agent Trace</a> is the interchange format Cursor published, with Anthropic, Cognition, Cloudflare, Vercel and Google behind it. DeepBlame writes it and reads it, which means attribution can move between tools instead of being locked to whichever one recorded it.</p>
+  </section>
+
+  <div class="feature" id="trace">
+    <div class="feature-text">
+      <p class="kicker">agent trace</p>
+      <h2>What comes in from elsewhere is marked as reported, not as something we saw.</h2>
+      <p>A trace says which lines an agent wrote. It carries no before-image, so an imported line is blamed at 80% with the reporting tool named, and <strong>revert will not touch it</strong> — there is nothing to put back.</p>
+      <p>A claim is only taken in if git can still show the state it was made against: the revision it names, or a content hash that matches the lines in your file today. That second path is how a trace from a colleague's clone lands correctly with no shared history. Anything else is counted, reported and left out rather than guessed at.</p>
+    </div>
+    <div class="term">
+      <div class="term-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>trace import</span></div>
+<pre><span class="d">$</span> deepblame trace import ./traces
+<span class="w">Took in 1 record</span>  <span class="d">from cursor</span>
+
+<span class="d">$</span> deepblame blame app.ts
+
+  <span class="d">1-2          you, or a tool nobody recorded</span>
+  3            <span class="g">cursor (reported)</span>  9f874ac  <span class="d">80%</span>
+               <span class="d">another tool's trace says so;</span>
+               <span class="d">we did not watch it happen</span></pre>
+    </div>
+  </div>
+
   <section class="section-head" id="commands">
     <h2>Every command.</h2>
     <p>One setup, then four commands answer nearly everything. No dashboard to learn, no account to make.</p>
@@ -802,6 +830,8 @@ Add <span class="w">--apply</span> to undo 1 file.</pre>
       <tr><td>deepblame cost</td><td>What the agents spent, by model and by agent</td></tr>
       <tr><td>deepblame report</td><td>How much of a branch or pull request an agent wrote</td></tr>
       <tr><td>deepblame push / pull</td><td>Share the ledger with your team</td></tr>
+      <tr><td>deepblame trace export</td><td>Write the ledger as Agent Trace, for any tool to read</td></tr>
+      <tr><td>deepblame trace import</td><td>Take in attribution another tool recorded</td></tr>
       <tr><td>deepblame log / show</td><td>Every recorded run, and one run in full</td></tr>
       <tr><td>deepblame doctor</td><td>Check recording is working, and say what to fix</td></tr>
       <tr><td>deepblame gc</td><td>Age old file contents out of the ledger</td></tr>
@@ -838,6 +868,7 @@ Add <span class="w">--apply</span> to undo 1 file.</pre>
           <li><a href="#how">How it works</a></li>
           <li><a href="#agents">Agents it records</a></li>
           <li><a href="#team">Teams</a></li>
+          <li><a href="#standard">Agent Trace</a></li>
           <li><a href="#commands">Commands</a></li>
           <li><a href="#install">Get started</a></li>
         </ul>
@@ -958,6 +989,15 @@ Add <span class="w">--apply</span> to undo 1 file.</pre>
       }
     }, { rootMargin: "0px 0px -12% 0px", threshold: 0.15 });
     for (const term of terms) watcher.observe(term);
+
+    /* A safety net. The effect is worth nothing next to the text being there,
+       and an observer that never fires — an odd zoom, a printed page, a
+       browser doing something unexpected — would leave empty black boxes. So
+       after a few seconds everything is shown regardless, scrolled to or not. */
+    setTimeout(() => {
+      for (const term of terms) show(term);
+      watcher.disconnect();
+    }, 3000);
   })();
 
   /* ---- drawer ---------------------------------------------------------
